@@ -1,7 +1,10 @@
 package main
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"log"
+	"os"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -11,23 +14,48 @@ import (
 	"github.com/pquerna/otp/totp"
 )
 
+type Token struct {
+	Name   string
+	Secret string
+	URI    string
+}
+
 func main() {
 	a := app.New()
 	w := a.NewWindow("gothic")
 
 	hello := widget.NewLabel("Welcome to gothic, enter your secret key and press the button below to generate the code.")
-	secret := widget.NewEntry()
+
+	config, err := os.Open("config.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer config.Close()
+
+	configBytes, err := ioutil.ReadAll(config)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var tokens []Token
+
+	err = json.Unmarshal(configBytes, &tokens)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	w.SetContent(container.NewVBox(
 		hello,
-		secret,
-		widget.NewButton("Generate code", func() {
-			code, err := totp.GenerateCode(secret.Text, time.Now())
-			if err != nil {
-				log.Println(err)
-			} else {
-				hello.SetText(code)
+		widget.NewButton("Refresh", func() {
+			hello.Text = ""
+			for _, token := range tokens {
+				code, err := totp.GenerateCode(token.Secret, time.Now())
+				if err != nil {
+					log.Fatal(err)
+				}
+				hello.SetText(hello.Text + "\n" + token.Name + ": " + code)
 			}
+
 		}),
 	))
 	w.Resize(fyne.NewSize(400, 400))
