@@ -1,0 +1,7 @@
+[
+    {
+        "name": "example",
+        "secret": "example",
+        "uri": "otpauth://totp/Test?secret=example&digits=6&period=30"
+    }
+]
